@@ -1,24 +1,270 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { type CSSProperties, type DragEvent, type KeyboardEvent, useState } from "react";
 import type { DragDropState } from "../types";
 
-function shell(state: DragDropState): CSSProperties {
-  return { width: state.width, minHeight: state.height, padding: state.padding, gap: state.gap, borderRadius: state.radius, border: `${state.borderWidth}px solid ${state.border}`, boxShadow: `0 ${Math.round(state.shadow / 3)}px ${state.shadow}px rgba(0,0,0,.28)`, background: state.background, color: state.foreground, fontFamily: state.fontFamily, opacity: state.disabled ? 0.55 : 1 };
+type DragItem = {
+  id: string;
+  label: string;
+  type: string;
+};
+
+const clampCount = (value: number, max: number) => Math.max(0, Math.min(max, Math.round(value)));
+
+function makeItems(state: DragDropState): DragItem[] {
+  return Array.from({ length: clampCount(state.itemCount, 14) }, (_, index) => ({
+    id: `item-${index + 1}`,
+    label: `${state.label} ${index + 1}`,
+    type: state.acceptedType,
+  }));
+}
+
+function moveBefore(ids: string[], movedId: string, targetId: string) {
+  const withoutMoved = ids.filter((id) => id !== movedId);
+  const targetIndex = withoutMoved.indexOf(targetId);
+  if (targetIndex < 0) return withoutMoved.concat(movedId);
+  return withoutMoved.slice(0, targetIndex).concat(movedId, withoutMoved.slice(targetIndex));
+}
+
+function styles(state: DragDropState) {
+  const mode = state.transferMode ?? "move";
+  const shell: CSSProperties = {
+    width: state.width,
+    minHeight: state.height,
+    padding: state.padding,
+    borderRadius: state.radius,
+    border: `${state.borderWidth}px solid ${state.border}`,
+    boxShadow: `0 ${Math.round(state.shadow / 3)}px ${state.shadow}px rgba(0,0,0,.28)`,
+    background: state.background,
+    color: state.foreground,
+    fontFamily: state.fontFamily,
+    opacity: state.disabled ? 0.55 : 1,
+  };
+  const layout: CSSProperties = {
+    display: "grid",
+    gap: state.gap,
+  };
+  const columns: CSSProperties = {
+    display: "grid",
+    gap: state.gap,
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  };
+  const panel: CSSProperties = {
+    border: `${state.borderWidth}px solid ${state.border}`,
+    borderRadius: Math.max(12, state.radius - 6),
+    padding: Math.max(12, Math.round(state.padding * 0.65)),
+    background: "rgba(15, 23, 42, 0.34)",
+  };
+  const sourceItem = (active: boolean, dragging: boolean): CSSProperties => ({
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    padding: "10px 12px",
+    borderRadius: Math.max(10, state.radius - 10),
+    border: `1px solid ${active ? state.accent : state.border}`,
+    background: active ? `${state.accent}22` : "rgba(255,255,255,.04)",
+    color: state.foreground,
+    cursor: state.disabled ? "not-allowed" : "grab",
+    opacity: dragging ? 0.5 : 1,
+  });
+  const dropZone = (over: boolean): CSSProperties => ({
+    minHeight: Math.max(120, Math.round(state.height * 0.42)),
+    display: "grid",
+    alignContent: "start",
+    gap: Math.max(8, Math.round(state.gap * 0.75)),
+    padding: Math.max(12, Math.round(state.padding * 0.65)),
+    borderRadius: Math.max(12, state.radius - 6),
+    border: `2px dashed ${over ? state.accent : state.border}`,
+    background: over ? `${state.accent}18` : "rgba(255,255,255,.035)",
+  });
+  const ghost: CSSProperties = {
+    marginTop: Math.max(8, Math.round(state.gap * 0.5)),
+    padding: "8px 10px",
+    borderRadius: 999,
+    background: `${state.accent}20`,
+    color: state.accent,
+    fontSize: Math.max(11, state.bodySize - 2),
+  };
+
+  return { mode, shell, layout, columns, panel, sourceItem, dropZone, ghost };
 }
 
 export default function LivePreview({ state }: { state: DragDropState }) {
-  const model = state as Record<string, unknown>;
-  const numberValue = (key: string, fallback: number) => typeof model[key] === "number" ? model[key] : fallback;
-  const stringValue = (key: string, fallback: string) => typeof model[key] === "string" ? model[key] : fallback;
-  const boolValue = (key: string) => typeof model[key] === "boolean" ? model[key] : false;
-  const count = numberValue("itemCount", numberValue("rowCount", numberValue("slideCount", numberValue("imageCount", numberValue("filterCount", numberValue("controlCount", 5))))));
-  const items = Array.from({ length: count }, (_, index) => index + 1);
-  const badge = (text: string) => <span className="rounded-full border px-3 py-1 text-xs" style={{ borderColor: state.border, color: state.accent }}>{text}</span>;
-  const panel = shell(state);
-  if ("chartType" in model) return <section role="img" aria-label={state.ariaLabel} style={panel} className="grid content-center"><h3 style={{ fontSize: state.titleSize }}>{state.title}</h3><div className="flex items-end gap-3">{items.map((item) => <div key={item} className="w-10 rounded-t-xl" style={{ height: 36 + item * 18, background: state.accent }} />)}</div></section>;
-  if ("src" in model && ("showTimeline" in model || "showCaptions" in model)) return <section role={state.role} aria-label={state.ariaLabel} style={panel} className="grid content-center"><h3>{state.title}</h3>{"showTimeline" in model ? <audio controls muted={boolValue("muted")} loop={boolValue("loop")} preload={stringValue("preload", "metadata")} className="w-full" /> : <video controls muted={boolValue("muted")} loop={boolValue("loop")} preload={stringValue("preload", "metadata")} poster={stringValue("poster", "")} className="w-full rounded-xl bg-black/40" />}</section>;
-  if (state.role === "dialog") return <div className="grid place-items-center"><section role="dialog" aria-label={state.ariaLabel} style={panel} className="grid"><h3 style={{ fontSize: state.titleSize }}>{state.title}</h3><p style={{ color: stringValue("muted", "#94a3b8") }}>{state.description}</p><div className="flex gap-2"><button type="button" className="rounded-xl px-4 py-2" style={{ background: state.accent, color: "#020617" }}>Action</button><button type="button" className="rounded-xl border px-4 py-2" style={{ borderColor: state.border }}>Cancel</button></div></section></div>;
-  if (state.role === "table") return <table role="table" aria-label={state.ariaLabel} style={panel}><caption>{stringValue("caption", state.title)}</caption><tbody>{items.map((item) => <tr key={item}><th className="p-2 text-left">Row {item}</th><td className="p-2">{state.label}</td></tr>)}</tbody></table>;
-  return <section id={state.id} role={state.role} aria-label={state.ariaLabel} tabIndex={state.tabIndex} style={panel} className="grid content-center"><h3 style={{ fontSize: state.titleSize, fontWeight: state.fontWeight }}>{state.title}</h3><p style={{ color: stringValue("muted", "#94a3b8"), fontSize: state.bodySize }}>{state.description}</p><div className="flex flex-wrap gap-2">{items.map((item) => badge(`${state.label} ${item}`))}</div><p className="text-xs" style={{ color: stringValue("muted", "#94a3b8") }}>{state.helper} · {stringValue("previewState", "default")}</p></section>;
+  const allItems = makeItems(state);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [isOver, setIsOver] = useState(false);
+  const [overItemId, setOverItemId] = useState<string | null>(null);
+  const helpId = `${state.id}-help`;
+  const dropId = `${state.id}-dropzone`;
+  const view = styles(state);
+  const mode = view.mode;
+  const knownIds = new Set(allItems.map((item) => item.id));
+  const droppedIds = selectedIds.filter((id) => knownIds.has(id));
+  const droppedItems = droppedIds.map((id) => allItems.find((item) => item.id === id)).filter((item): item is DragItem => Boolean(item));
+  const sourceItems = mode === "copy" ? allItems : allItems.filter((item) => !droppedIds.includes(item.id));
+  const zoneCount = Math.max(1, Math.round(state.zoneCount));
+  const previewState = state.previewState === "empty" || allItems.length === 0 ? "empty" : state.previewState;
+
+  const commitItem = (itemId: string, targetId?: string) => {
+    if (state.disabled || !knownIds.has(itemId)) return;
+    setActiveId(itemId);
+    setSelectedIds((current) => {
+      const normalized = current.filter((id) => knownIds.has(id));
+      if (mode === "reorder" && targetId) return moveBefore(normalized.includes(itemId) ? normalized : normalized.concat(itemId), itemId, targetId);
+      if (mode === "copy") return normalized.includes(itemId) ? normalized : normalized.concat(itemId);
+      return normalized.includes(itemId) ? normalized : normalized.concat(itemId);
+    });
+  };
+
+  const removeItem = (itemId: string) => {
+    if (state.disabled) return;
+    setSelectedIds((current) => current.filter((id) => id !== itemId));
+    setActiveId(itemId);
+  };
+
+  const handleDragStart = (itemId: string) => (event: DragEvent<HTMLButtonElement>) => {
+    if (state.disabled) {
+      event.preventDefault();
+      return;
+    }
+    event.dataTransfer.effectAllowed = mode === "copy" ? "copy" : "move";
+    event.dataTransfer.setData("text/plain", itemId);
+    setDraggingId(itemId);
+    setActiveId(itemId);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLElement>) => {
+    if (state.disabled) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = mode === "copy" ? "copy" : "move";
+    setIsOver(true);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    const itemId = event.dataTransfer.getData("text/plain") || draggingId;
+    if (itemId) commitItem(itemId, overItemId ?? undefined);
+    setDraggingId(null);
+    setIsOver(false);
+    setOverItemId(null);
+  };
+
+  const handleItemKeyDown = (itemId: string) => (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (state.disabled) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (droppedIds.includes(itemId) && mode !== "copy") {
+        removeItem(itemId);
+      } else {
+        commitItem(itemId);
+      }
+    }
+    if (mode === "reorder" && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      event.preventDefault();
+      setSelectedIds((current) => {
+        const index = current.indexOf(itemId);
+        if (index < 0) return current;
+        const next = current.slice();
+        const targetIndex = event.key === "ArrowUp" ? Math.max(0, index - 1) : Math.min(next.length - 1, index + 1);
+        [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+        return next;
+      });
+    }
+  };
+
+  const renderItem = (item: DragItem, location: "source" | "drop") => {
+    const selected = droppedIds.includes(item.id);
+    const dragging = draggingId === item.id;
+    return (
+      <li key={`${location}-${item.id}`} style={{ listStyle: "none" }}>
+        <button
+          type="button"
+          draggable={!state.disabled}
+          onClick={() => (location === "drop" ? removeItem(item.id) : commitItem(item.id))}
+          onDragStart={handleDragStart(item.id)}
+          onDragEnd={() => {
+            setDraggingId(null);
+            setIsOver(false);
+            setOverItemId(null);
+          }}
+          onDragOver={(event) => {
+            if (location === "drop") {
+              handleDragOver(event);
+              setOverItemId(item.id);
+            }
+          }}
+          onKeyDown={handleItemKeyDown(item.id)}
+          aria-label={`${location === "drop" ? "Remove" : "Add"} ${item.label}`}
+          aria-describedby={helpId}
+          aria-pressed={selected}
+          disabled={state.disabled}
+          style={view.sourceItem(activeId === item.id || selected || overItemId === item.id, dragging)}
+        >
+          <span>{item.label}</span>
+          <small style={{ color: state.muted }}>{item.type}</small>
+        </button>
+      </li>
+    );
+  };
+
+  return (
+    <section
+      id={state.id}
+      role={state.role}
+      aria-label={state.ariaLabel}
+      aria-describedby={helpId}
+      tabIndex={state.tabIndex}
+      data-state={previewState}
+      data-drag-state={draggingId ? "dragging" : isOver ? "over" : state.dragState}
+      data-transfer-mode={mode}
+      style={view.shell}
+    >
+      <div style={view.layout}>
+        <header>
+          <p style={{ margin: 0, color: state.accent, fontSize: Math.max(11, state.bodySize - 2), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>{mode} drop board</p>
+          <h3 style={{ margin: "4px 0 0", fontSize: state.titleSize, fontWeight: state.fontWeight }}>{state.title}</h3>
+          <p style={{ margin: "6px 0 0", color: state.muted, fontSize: state.bodySize }}>{state.description}</p>
+        </header>
+
+        <div style={view.columns}>
+          <section aria-label={state.sourceLabel ?? "Available items"} style={view.panel}>
+            <strong>{state.sourceLabel ?? "Available items"}</strong>
+            <ul style={{ display: "grid", gap: Math.max(8, Math.round(state.gap * 0.65)), margin: "12px 0 0", padding: 0 }}>
+              {sourceItems.length ? sourceItems.map((item) => renderItem(item, "source")) : <li style={{ color: state.muted, listStyle: "none" }}>All items are in the drop zone.</li>}
+            </ul>
+          </section>
+
+          <section
+            id={dropId}
+            aria-label={state.dropZoneLabel ?? "Selected drop zone"}
+            aria-describedby={helpId}
+            onDragOver={handleDragOver}
+            onDragLeave={() => {
+              setIsOver(false);
+              setOverItemId(null);
+            }}
+            onDrop={handleDrop}
+            style={view.dropZone(isOver)}
+          >
+            <strong>{state.dropZoneLabel ?? "Selected drop zone"}</strong>
+            <p style={{ margin: 0, color: state.muted, fontSize: Math.max(11, state.bodySize - 1) }}>{zoneCount} zone{zoneCount === 1 ? "" : "s"} accept {state.acceptedType}</p>
+            {droppedItems.length ? (
+              <ul role="listbox" aria-label="Dropped items" style={{ display: "grid", gap: Math.max(8, Math.round(state.gap * 0.65)), margin: 0, padding: 0 }}>
+                {droppedItems.map((item) => renderItem(item, "drop"))}
+              </ul>
+            ) : (
+              <div role="status" style={{ color: state.muted, border: `1px dashed ${state.border}`, borderRadius: Math.max(10, state.radius - 10), padding: 14 }}>{state.emptyStateText ?? "Drop items here to build your list."}</div>
+            )}
+          </section>
+        </div>
+
+        {state.showGhost && draggingId ? <div aria-live="polite" style={view.ghost}>Dragging {allItems.find((item) => item.id === draggingId)?.label ?? state.label}</div> : null}
+        <p id={helpId} style={{ margin: 0, color: state.muted, fontSize: Math.max(11, state.bodySize - 2) }}>{state.keyboardHelp ? `${state.helper} Press Enter or Space to move an item; use Arrow Up or Arrow Down to reorder dropped items.` : state.helper}</p>
+      </div>
+    </section>
+  );
 }

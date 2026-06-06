@@ -1,5 +1,9 @@
 export type SectionId = "presets" | "basics" | "metadata" | "content" | "items" | "behavior" | "layout" | "placement" | "sizing" | "colors" | "border" | "radius" | "shadow" | "typography" | "motion" | "states" | "accessibility";
 
+export type DragDropRole = "application" | "group" | "region" | "list";
+
+export type DragDropMode = "move" | "copy" | "reorder";
+
 export type DragDropState = {
   title: string;
   description: string;
@@ -27,13 +31,17 @@ export type DragDropState = {
   previewState: "default" | "hover" | "focus" | "active" | "open" | "closed" | "selected" | "loading" | "empty" | "error" | "success";
   motion: boolean;
   disabled: boolean;
-  role: "region" | "group" | "status" | "alert" | "dialog" | "menu" | "menubar" | "navigation" | "list" | "tree" | "table" | "tablist" | "form" | "textbox" | "img" | "application";
+  role: DragDropRole;
   zoneCount: number;
   itemCount: number;
   acceptedType: string;
   dragState: string;
   showGhost: boolean;
   keyboardHelp: boolean;
+  transferMode?: DragDropMode;
+  sourceLabel?: string;
+  dropZoneLabel?: string;
+  emptyStateText?: string;
 };
 
 export type StudioPreset = { id: string; family: string; archetype: string; variant: string; size: string; tags: string[]; state: DragDropState };
