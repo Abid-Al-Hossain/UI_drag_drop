@@ -65,6 +65,7 @@ function getStyles(model) {
     color: model.foreground,
     cursor: model.disabled ? "not-allowed" : "grab",
     opacity: dragging ? 0.5 : 1,
+    transition: model.motion ? "border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease" : "none",
   });
   const dropZone = (over) => ({
     minHeight: Math.max(120, Math.round(model.height * 0.42)),
@@ -75,6 +76,8 @@ function getStyles(model) {
     borderRadius: Math.max(12, model.radius - 6),
     border: "2px dashed " + (over ? model.accent : model.border),
     background: over ? model.accent + "18" : "rgba(255,255,255,.035)",
+    transform: over && model.motion ? "scale(1.02)" : "scale(1)",
+    transition: model.motion ? "background 0.2s ease, border-color 0.2s ease, transform 0.2s ease" : "none",
   });
   const ghost = {
     marginTop: Math.max(8, Math.round(model.gap * 0.5)),

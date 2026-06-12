@@ -68,6 +68,7 @@ function styles(state: DragDropState) {
     color: state.foreground,
     cursor: state.disabled ? "not-allowed" : "grab",
     opacity: dragging ? 0.5 : 1,
+    transition: state.motion ? "border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease" : "none",
   });
   const dropZone = (over: boolean): CSSProperties => ({
     minHeight: Math.max(120, Math.round(state.height * 0.42)),
@@ -78,6 +79,8 @@ function styles(state: DragDropState) {
     borderRadius: Math.max(12, state.radius - 6),
     border: `2px dashed ${over ? state.accent : state.border}`,
     background: over ? `${state.accent}18` : "rgba(255,255,255,.035)",
+    transform: over && state.motion ? "scale(1.02)" : "scale(1)",
+    transition: state.motion ? "background 0.2s ease, border-color 0.2s ease, transform 0.2s ease" : "none",
   });
   const ghost: CSSProperties = {
     marginTop: Math.max(8, Math.round(state.gap * 0.5)),
