@@ -2,6 +2,7 @@
 
 import { type CSSProperties, type DragEvent, type KeyboardEvent, useState } from "react";
 import type { DragDropState } from "../types";
+import { SYSTEM_FONTS } from "@/components/shared/typography/fontConstants";
 
 type DragItem = {
   id: string;
@@ -10,6 +11,24 @@ type DragItem = {
 };
 
 const clampCount = (value: number, max: number) => Math.max(0, Math.min(max, Math.round(value)));
+
+function resolveFont(state: { fontBucket: "system" | "google"; googleFontFamily: string; systemFontIdx: number }): string {
+  return state.fontBucket === "google"
+    ? `"${state.googleFontFamily}", sans-serif`
+    : (SYSTEM_FONTS[state.systemFontIdx]?.css ?? "inherit");
+}
+
+function buildShadow(state: { shadowEnabled: boolean; shadowX: number; shadowY: number; shadowBlur: number; shadowSpread: number; shadowColor: string; shadowOpacity: number }): string {
+  if (!state.shadowEnabled) return "none";
+  const hex = Math.round(state.shadowOpacity * 255).toString(16).padStart(2, "0");
+  return `${state.shadowX}px ${state.shadowY}px ${state.shadowBlur}px ${state.shadowSpread}px ${state.shadowColor}${hex}`;
+}
+
+function buildRadius(state: { radiusLinked: boolean; radius: number; radiusTL: number; radiusTR: number; radiusBR: number; radiusBL: number }): string {
+  return state.radiusLinked
+    ? `${state.radius}px`
+    : `${state.radiusTL}px ${state.radiusTR}px ${state.radiusBR}px ${state.radiusBL}px`;
+}
 
 function makeItems(state: DragDropState): DragItem[] {
   return Array.from({ length: clampCount(state.itemCount, 14) }, (_, index) => ({
@@ -32,12 +51,17 @@ function styles(state: DragDropState) {
     width: state.width,
     minHeight: state.height,
     padding: state.padding,
-    borderRadius: state.radius,
-    border: `${state.borderWidth}px solid ${state.border}`,
-    boxShadow: `0 ${Math.round(state.shadow / 3)}px ${state.shadow}px rgba(0,0,0,.28)`,
+    borderRadius: buildRadius(state),
+    border: `${state.borderWidth}px ${state.borderStyle} ${state.border}`,
+    boxShadow: buildShadow(state),
     background: state.background,
     color: state.foreground,
-    fontFamily: state.fontFamily,
+    fontFamily: resolveFont(state),
+    fontStyle: state.fontStyle,
+    textTransform: state.textTransform,
+    textDecoration: state.textDecoration,
+    letterSpacing: `${state.letterSpacing}${state.letterSpacingUnit}`,
+    lineHeight: state.lineHeight,
     opacity: state.disabled ? 0.55 : 1,
   };
   const layout: CSSProperties = {
@@ -50,7 +74,7 @@ function styles(state: DragDropState) {
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
   };
   const panel: CSSProperties = {
-    border: `${state.borderWidth}px solid ${state.border}`,
+    border: `${state.borderWidth}px ${state.borderStyle} ${state.border}`,
     borderRadius: Math.max(12, state.radius - 6),
     padding: Math.max(12, Math.round(state.padding * 0.65)),
     background: "rgba(15, 23, 42, 0.34)",
@@ -68,7 +92,7 @@ function styles(state: DragDropState) {
     color: state.foreground,
     cursor: state.disabled ? "not-allowed" : "grab",
     opacity: dragging ? 0.5 : 1,
-    transition: state.motion ? "border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease" : "none",
+    transition: state.transitionDuration > 0 ? "border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease" : "none",
   });
   const dropZone = (over: boolean): CSSProperties => ({
     minHeight: Math.max(120, Math.round(state.height * 0.42)),
@@ -79,8 +103,8 @@ function styles(state: DragDropState) {
     borderRadius: Math.max(12, state.radius - 6),
     border: `2px dashed ${over ? state.accent : state.border}`,
     background: over ? `${state.accent}18` : "rgba(255,255,255,.035)",
-    transform: over && state.motion ? "scale(1.02)" : "scale(1)",
-    transition: state.motion ? "background 0.2s ease, border-color 0.2s ease, transform 0.2s ease" : "none",
+    transform: over && state.transitionDuration > 0 ? "scale(1.02)" : "scale(1)",
+    transition: state.transitionDuration > 0 ? "background 0.2s ease, border-color 0.2s ease, transform 0.2s ease" : "none",
   });
   const ghost: CSSProperties = {
     marginTop: Math.max(8, Math.round(state.gap * 0.5)),
