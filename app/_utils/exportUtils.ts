@@ -8,10 +8,12 @@ export function buildExportPayload(state: DragDropState, fileName = "drag-drop")
 
 export function buildReactCode(state: DragDropState) {
   const stateJson = JSON.stringify(state, null, 2);
-
   return `import * as React from "react";
 
 const state = ${stateJson};
+
+function resolveFont(s) { return s.fontBucket === "google" ? '"' + s.googleFontFamily + '", sans-serif' : "inherit"; }
+function buildShadow(s) { if (!s.shadowEnabled) return "none"; var hex = Math.round(s.shadowOpacity * 255).toString(16).padStart(2, "0"); return s.shadowX + "px " + s.shadowY + "px " + s.shadowBlur + "px " + s.shadowSpread + "px " + s.shadowColor + hex; }
 
 const clampCount = (value, max) => Math.max(0, Math.min(max, Math.round(value)));
 
@@ -37,17 +39,18 @@ function getStyles(model) {
     minHeight: model.height,
     padding: model.padding,
     borderRadius: model.radius,
-    border: model.borderWidth + "px solid " + model.border,
+    border: model.borderWidth + "px " + model.borderStyle + " " + (model.disabled && model.disabledUseCustomColors ? model.disabledBorder : model.border),
     boxShadow: "0 " + Math.round(model.shadow / 3) + "px " + model.shadow + "px rgba(0,0,0,.28)",
     background: model.background,
     color: model.foreground,
     fontFamily: model.fontFamily,
-    opacity: model.disabled ? 0.55 : 1,
+    opacity: model.disabled ? (model.disabledOpacity ?? 0.5) : 1,
+cursor: model.disabled ? model.disabledCursor : undefined,
   };
   const layout = { display: "grid", gap: model.gap };
   const columns = { display: "grid", gap: model.gap, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" };
   const panel = {
-    border: model.borderWidth + "px solid " + model.border,
+    border: model.borderWidth + "px " + model.borderStyle + " " + (model.disabled && model.disabledUseCustomColors ? model.disabledBorder : model.border),
     borderRadius: Math.max(12, model.radius - 6),
     padding: Math.max(12, Math.round(model.padding * 0.65)),
     background: "rgba(15, 23, 42, 0.34)",
@@ -63,7 +66,7 @@ function getStyles(model) {
     border: "1px solid " + (active ? model.accent : model.border),
     background: active ? model.accent + "22" : "rgba(255,255,255,.04)",
     color: model.foreground,
-    cursor: model.disabled ? "not-allowed" : "grab",
+    cursor: model.disabled ? model.disabledCursor : "grab",
     opacity: dragging ? 0.5 : 1,
     transition: model.motion ? "border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease" : "none",
   });

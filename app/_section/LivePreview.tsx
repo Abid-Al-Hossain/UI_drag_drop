@@ -52,9 +52,9 @@ function styles(state: DragDropState) {
     minHeight: state.height,
     padding: state.padding,
     borderRadius: buildRadius(state),
-    border: `${state.borderWidth}px ${state.borderStyle} ${state.border}`,
+    border: `${state.borderWidth}px ${state.borderStyle} ${state.disabled && state.disabledUseCustomColors ? state.disabledBorder : state.border}`,
     boxShadow: buildShadow(state),
-    background: state.background,
+    background: state.disabled && state.disabledUseCustomColors ? state.disabledBg : state.background,
     color: state.foreground,
     fontFamily: resolveFont(state),
     fontStyle: state.fontStyle,
@@ -62,7 +62,8 @@ function styles(state: DragDropState) {
     textDecoration: state.textDecoration,
     letterSpacing: `${state.letterSpacing}${state.letterSpacingUnit}`,
     lineHeight: state.lineHeight,
-    opacity: state.disabled ? 0.55 : 1,
+    opacity: state.disabled ? state.disabledOpacity : 1,
+    cursor: state.disabled ? state.disabledCursor : undefined,
   };
   const layout: CSSProperties = {
     display: "grid",
@@ -74,7 +75,7 @@ function styles(state: DragDropState) {
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
   };
   const panel: CSSProperties = {
-    border: `${state.borderWidth}px ${state.borderStyle} ${state.border}`,
+    border: `${state.borderWidth}px ${state.borderStyle} ${state.disabled && state.disabledUseCustomColors ? state.disabledBorder : state.border}`,
     borderRadius: Math.max(12, state.radius - 6),
     padding: Math.max(12, Math.round(state.padding * 0.65)),
     background: "rgba(15, 23, 42, 0.34)",
