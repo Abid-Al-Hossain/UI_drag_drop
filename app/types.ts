@@ -1,4 +1,4 @@
-export type SectionId = "presets" | "basics" | "metadata" | "content" | "items" | "behavior" | "layout" | "placement" | "sizing" | "colors" | "border" | "radius" | "shadow" | "typography" | "transitions" | "focus-ring" | "states" | "disabled" | "accessibility";
+export type SectionId = "presets" | "basics" | "metadata" | "items" | "behavior" | "sizing" | "colors" | "border" | "radius" | "shadow" | "typography" | "transitions" | "focus-ring" | "states" | "disabled" | "accessibility";
 
 export type DragDropRole = "application" | "group" | "region" | "list";
 
@@ -98,24 +98,12 @@ export const SECTIONS: Array<{ id: SectionId; label: string }> = [
     "label": "Metadata"
   },
   {
-    "id": "content",
-    "label": "Content"
-  },
-  {
     "id": "items",
     "label": "Items"
   },
   {
     "id": "behavior",
     "label": "Behavior"
-  },
-  {
-    "id": "layout",
-    "label": "Layout"
-  },
-  {
-    "id": "placement",
-    "label": "Placement"
   },
   {
     "id": "sizing",

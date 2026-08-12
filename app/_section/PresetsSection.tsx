@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Input from "@/components/shared/input/Input";
 import Select from "@/components/shared/input/Select";
 import { SectionCard } from "@/components/shared/layout/SectionCard";
@@ -32,12 +32,7 @@ export default function PresetsSection({ activePresetId, onApply }: { activePres
   const visiblePresets = filtered.slice(pageStart, pageStart + PAGE_SIZE);
   const hasFilters = Boolean(normalizedQuery) || family !== "all" || size !== "all";
   const source = filtered.length ? filtered : DRAGDROP_PRESETS;
-
-  useEffect(() => {
-    setPage(1);
-  }, [family, normalizedQuery, size]);
-
-  const resetFilters = () => {
+const resetFilters = () => {
     setQuery("");
     setFamily("all");
     setSize("all");
@@ -47,9 +42,9 @@ export default function PresetsSection({ activePresetId, onApply }: { activePres
   return (
     <SectionCard title="Presets" subtitle="48 structured full-state presets.">
       <div className="grid gap-3 sm:grid-cols-3" data-audit="preset-filters" data-testid="preset-filters">
-        <Input label="Search presets" value={query} onChange={setQuery} placeholder="Family, mode, size, tag" />
-        <Select label="Family" value={family} options={families} onChange={setFamily} />
-        <Select label="Size" value={size} options={sizes} onChange={setSize} />
+        <Input label="Search presets" value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder="Family, mode, size, tag" />
+        <Select label="Family" value={family} options={families} onChange={(value) => { setFamily(value); setPage(1); }} />
+        <Select label="Size" value={size} options={sizes} onChange={(value) => { setSize(value); setPage(1); }} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 text-sm" style={{ borderColor: "var(--border)", color: "var(--text)" }} data-audit="preset-results" data-testid="preset-results">
